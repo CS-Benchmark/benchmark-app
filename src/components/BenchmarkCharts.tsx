@@ -169,30 +169,41 @@ export function BenchmarkCharts({ project, onBack }: BenchmarkChartsProps) {
       .join('|')
   }, [activeCategoryFields])
 
-  // Generate a readable label for a category combination
-  const getCategoryLabel = useCallback((benchmark: Benchmark): string => {
+  // Generate a readable label with full category names for the header
+  const getCategoryLabelFull = useCallback((benchmark: Benchmark): string => {
     return activeCategoryFields
-      .map(({ key, name }) => `${name}: ${benchmark[key as keyof Benchmark] || 'N/A'}`)
-      .join(', ')
+      .map(({ key, name }) => {
+        const value = benchmark[key as keyof Benchmark] || 'N/A'
+        return `${name}: ${value}`
+      })
+      .join(' | ')
+  }, [activeCategoryFields])
+
+  // Generate a compact label with only values for charts
+  const getCategoryLabelCompact = useCallback((benchmark: Benchmark): string => {
+    return activeCategoryFields
+      .map(({ key }) => benchmark[key as keyof Benchmark] || 'N/A')
+      .join(' | ')
   }, [activeCategoryFields])
 
   // Get all unique category combinations from filtered benchmarks
   const uniqueCategoryCombinations = useMemo(() => {
-    const combinationsMap = new Map<string, { key: string; label: string; sample: Benchmark }>()
+    const combinationsMap = new Map<string, { key: string; labelFull: string; labelCompact: string; sample: Benchmark }>()
 
     benchmarks.forEach(benchmark => {
       const key = getCategoryKey(benchmark)
       if (!combinationsMap.has(key)) {
         combinationsMap.set(key, {
           key,
-          label: getCategoryLabel(benchmark),
+          labelFull: getCategoryLabelFull(benchmark),
+          labelCompact: getCategoryLabelCompact(benchmark),
           sample: benchmark
         })
       }
     })
 
     return Array.from(combinationsMap.values())
-  }, [benchmarks, getCategoryKey, getCategoryLabel])
+  }, [benchmarks, getCategoryKey, getCategoryLabelFull, getCategoryLabelCompact])
 
   // Prepare chart data for each value field
   const getChartDataForValue = useCallback((valueKey: string) => {
@@ -362,7 +373,7 @@ export function BenchmarkCharts({ project, onBack }: BenchmarkChartsProps) {
                           className="legend-color"
                           style={{ backgroundColor: categoryColors[index] }}
                         />
-                        <span className="legend-label">{combo.label}</span>
+                        <span className="legend-label">{combo.labelFull}</span>
                       </div>
                     ))}
                   </div>
@@ -391,7 +402,7 @@ export function BenchmarkCharts({ project, onBack }: BenchmarkChartsProps) {
                                 className="stat-card-header"
                                 style={{ backgroundColor: categoryColors[index] }}
                               >
-                                <h4>{combo.label}</h4>
+                                <h4>{combo.labelCompact}</h4>
                               </div>
                               <div className="stat-card-body">
                                 <div className="stat-row">
@@ -439,7 +450,7 @@ export function BenchmarkCharts({ project, onBack }: BenchmarkChartsProps) {
                             wrapperStyle={{ paddingTop: '20px' }}
                             formatter={(value) => {
                               const combo = uniqueCategoryCombinations.find(c => c.key === value)
-                              return combo ? combo.label : value
+                              return combo ? combo.labelCompact : value
                             }}
                           />
                           {uniqueCategoryCombinations.map((combo, index) => (
