@@ -31,6 +31,29 @@ const addRecentFilter = (project: string, filters: CategoryFilters) => {
     localStorage.setItem(`recentFilters-${project}`, JSON.stringify(updated))
 }
 
+// Helper to manage favorite filters in localStorage
+const getFavoriteFilters = (project: string): CategoryFilters[] => {
+    const stored = localStorage.getItem(`favoriteFilters-${project}`)
+    return stored ? JSON.parse(stored) : []
+}
+
+const addFavoriteFilter = (project: string, filters: CategoryFilters) => {
+    if (Object.keys(filters).length === 0) return
+    const favorites = getFavoriteFilters(project)
+    const isAlreadyFavorite = favorites.some(f => JSON.stringify(f) === JSON.stringify(filters))
+
+    if (!isAlreadyFavorite) {
+        const updated = [...favorites, filters]
+        localStorage.setItem(`favoriteFilters-${project}`, JSON.stringify(updated))
+    }
+}
+
+const removeFavoriteFilter = (project: string, filters: CategoryFilters) => {
+    const favorites = getFavoriteFilters(project)
+    const updated = favorites.filter(f => JSON.stringify(f) !== JSON.stringify(filters))
+    localStorage.setItem(`favoriteFilters-${project}`, JSON.stringify(updated))
+}
+
 export function BenchmarkCharts({project, onBack}: BenchmarkChartsProps) {
     const [categories, setCategories] = useState<{ [key: string]: string[] }>({})
     const [benchmarks, setBenchmarks] = useState<Benchmark[]>([])
@@ -38,6 +61,7 @@ export function BenchmarkCharts({project, onBack}: BenchmarkChartsProps) {
     const [error, setError] = useState<string | null>(null)
     const [showCharts, setShowCharts] = useState(false)
     const [recentFilters, setRecentFilters] = useState<CategoryFilters[]>([])
+    const [favoriteFilters, setFavoriteFilters] = useState<CategoryFilters[]>([])
     const [exampleFilters, setExampleFilters] = useState<CategoryFilters[]>([])
 
     // Extract active category names from metadata - memoize to prevent recreating on every render
@@ -151,6 +175,7 @@ export function BenchmarkCharts({project, onBack}: BenchmarkChartsProps) {
     useEffect(() => {
         fetchCategoriesAndExamples()
         setRecentFilters(getRecentFilters(project.project))
+        setFavoriteFilters(getFavoriteFilters(project.project))
     }, [fetchCategoriesAndExamples, project.project])
 
     // If categories are pre-selected from URL, fetch benchmarks automatically
@@ -285,6 +310,22 @@ export function BenchmarkCharts({project, onBack}: BenchmarkChartsProps) {
 
         // Immediately fetch benchmarks for the chosen filters and show charts
         fetchBenchmarks(filters)
+    }
+
+    const handleFavoriteToggle = (filters: CategoryFilters) => {
+        const favorites = getFavoriteFilters(project.project)
+        const isFavorite = favorites.some(f => JSON.stringify(f) === JSON.stringify(filters))
+
+        if (isFavorite) {
+            removeFavoriteFilter(project.project, filters)
+        } else {
+            addFavoriteFilter(project.project, filters)
+        }
+        setFavoriteFilters(getFavoriteFilters(project.project))
+    }
+
+    const isFavorite = (filters: CategoryFilters) => {
+        return favoriteFilters.some(f => JSON.stringify(f) === JSON.stringify(filters))
     }
 
     const handleResetFilters = () => {
@@ -466,11 +507,46 @@ export function BenchmarkCharts({project, onBack}: BenchmarkChartsProps) {
                                 >
                                     Show Charts
                                 </button>
+                                <button
+                                    onClick={() => handleFavoriteToggle(selectedCategories)}
+                                    className={`secondary-button favorite-button ${isFavorite(selectedCategories) ? 'favorited' : ''}`}
+                                    disabled={Object.keys(selectedCategories).length === 0}
+                                    title={isFavorite(selectedCategories) ? 'Remove from favorites' : 'Add to favorites'}
+                                >
+                                    ★ {isFavorite(selectedCategories) ? 'Favorited' : 'Favorite'}
+                                </button>
                             </div>
 
                             {/* Recently Used and Example Filters */}
-                            {(recentFilters.length > 0 || exampleFilters.length > 0) && (
+                            {(favoriteFilters.length > 0 || recentFilters.length > 0 || exampleFilters.length > 0) && (
                                 <div className="suggested-filters">
+                                    {favoriteFilters.length > 0 && (
+                                        <div className="filter-suggestion-section">
+                                            <h3>Favorites</h3>
+                                            <div className="filter-tags">
+                                                {favoriteFilters.map((filters, index) => (
+                                                    <div key={index} className="filter-tag-wrapper">
+                                                        <button
+                                                            className="filter-tag-button"
+                                                            onClick={() => applyFilterSet(filters)}
+                                                            title={Object.entries(filters)
+                                                                .map(([key, value]) => `${activeCategoryFields.find(f => f.key === key)?.name}: ${value}`)
+                                                                .join(' | ')}
+                                                        >
+                                                            {Object.values(filters).join(' / ')}
+                                                        </button>
+                                                        <button
+                                                            className="remove-favorite-button"
+                                                            onClick={() => handleFavoriteToggle(filters)}
+                                                            title="Remove from favorites"
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                     {recentFilters.length > 0 && (
                                         <div className="filter-suggestion-section">
                                             <h3>Recently Used</h3>
