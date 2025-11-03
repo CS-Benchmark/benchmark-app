@@ -15,12 +15,29 @@ interface ChartDataPoint {
   [key: string]: string | number | null
 }
 
+// Helper to manage recently used filters in localStorage
+const getRecentFilters = (project: string): CategoryFilters[] => {
+  const stored = localStorage.getItem(`recentFilters-${project}`)
+  return stored ? JSON.parse(stored) : []
+}
+
+const addRecentFilter = (project: string, filters: CategoryFilters) => {
+  if (Object.keys(filters).length === 0) return
+
+  const recent = getRecentFilters(project)
+  const updated = [filters, ...recent.filter(f => JSON.stringify(f) !== JSON.stringify(filters))].slice(0, 3)
+
+  localStorage.setItem(`recentFilters-${project}`, JSON.stringify(updated))
+}
+
 export function BenchmarkCharts({ project, onBack }: BenchmarkChartsProps) {
   const [categories, setCategories] = useState<{ [key: string]: string[] }>({})
   const [benchmarks, setBenchmarks] = useState<Benchmark[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showCharts, setShowCharts] = useState(false)
+  const [recentFilters, setRecentFilters] = useState<CategoryFilters[]>([])
+  const [exampleFilters, setExampleFilters] = useState<CategoryFilters[]>([])
 
   // Extract active category names from metadata - memoize to prevent recreating on every render
   const activeCategoryFields = useMemo(() =>
@@ -56,11 +73,11 @@ export function BenchmarkCharts({ project, onBack }: BenchmarkChartsProps) {
     ].filter(val => val.name !== null) as { key: string; name: string }[]
   , [project.value1_name, project.value2_name, project.value3_name, project.value4_name, project.value5_name])
 
-  const fetchCategories = useCallback(async () => {
+  const fetchCategoriesAndExamples = useCallback(async () => {
     try {
       setLoading(true)
 
-      // Fetch distinct values for each active category in parallel using the database function
+      // Fetch distinct values for each active category in parallel
       const categoryPromises = activeCategoryFields.map(async ({ key }) => {
         const { data, error: fetchError } = await supabase
           .rpc('get_distinct_categories', {
@@ -76,11 +93,27 @@ export function BenchmarkCharts({ project, onBack }: BenchmarkChartsProps) {
         return { key, values }
       })
 
-      const results = await Promise.all(categoryPromises)
+      // Fetch a few example combinations
+      const examplesPromise = supabase
+        .rpc('get_example_filters', {
+          p_project: project.project,
+          p_category_columns: activeCategoryFields.map(c => c.key)
+        })
+
+      const [categoryResults, { data: examplesData, error: examplesError }] = await Promise.all([
+        Promise.all(categoryPromises),
+        examplesPromise
+      ])
+
+      if (examplesError) {
+        console.warn('Could not fetch example filters:', examplesError.message)
+      } else {
+        setExampleFilters(examplesData || [])
+      }
 
       // Convert results to categoryMap
       const categoriesData: { [key: string]: string[] } = {}
-      results.forEach(({ key, values }) => {
+      categoryResults.forEach(({ key, values }) => {
         categoriesData[key] = values
       })
 
@@ -94,8 +127,9 @@ export function BenchmarkCharts({ project, onBack }: BenchmarkChartsProps) {
   }, [project.project, activeCategoryFields])
 
   useEffect(() => {
-    fetchCategories()
-  }, [fetchCategories])
+    fetchCategoriesAndExamples()
+    setRecentFilters(getRecentFilters(project.project))
+  }, [fetchCategoriesAndExamples, project.project])
 
   // If categories are pre-selected from URL, fetch benchmarks automatically
   useEffect(() => {
@@ -113,6 +147,12 @@ export function BenchmarkCharts({ project, onBack }: BenchmarkChartsProps) {
     try {
       setLoading(true)
       setError(null)
+
+      // Save filters to recent list
+      if (Object.keys(selectedCategories).length > 0) {
+        addRecentFilter(project.project, selectedCategories)
+        setRecentFilters(getRecentFilters(project.project))
+      }
 
       let query = supabase
         .from('benchmarks')
@@ -203,6 +243,18 @@ export function BenchmarkCharts({ project, onBack }: BenchmarkChartsProps) {
 
   const handleShowCharts = () => {
     fetchBenchmarks()
+  }
+
+  const applyFilterSet = (filters: CategoryFilters) => {
+    setSelectedCategories(filters)
+    // We need to manually update the URL here as the state change doesn't trigger the effect
+    const params = new URLSearchParams()
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) {
+        params.set(key, value)
+      }
+    })
+    window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}`)
   }
 
   const handleResetFilters = () => {
@@ -370,6 +422,50 @@ export function BenchmarkCharts({ project, onBack }: BenchmarkChartsProps) {
                   </div>
                 ))}
               </div>
+
+              {/* Recently Used and Example Filters */}
+              {(recentFilters.length > 0 || exampleFilters.length > 0) && (
+                <div className="suggested-filters">
+                  {recentFilters.length > 0 && (
+                    <div className="filter-suggestion-section">
+                      <h3>Recently Used</h3>
+                      <div className="filter-tags">
+                        {recentFilters.map((filters, index) => (
+                          <button
+                            key={index}
+                            className="filter-tag-button"
+                            onClick={() => applyFilterSet(filters)}
+                            title={Object.entries(filters)
+                              .map(([key, value]) => `${activeCategoryFields.find(f => f.key === key)?.name}: ${value}`)
+                              .join(' | ')}
+                          >
+                            {Object.values(filters).join(' / ')}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {exampleFilters.length > 0 && (
+                     <div className="filter-suggestion-section">
+                      <h3>Examples</h3>
+                      <div className="filter-tags">
+                        {exampleFilters.map((filters, index) => (
+                          <button
+                            key={index}
+                            className="filter-tag-button"
+                            onClick={() => applyFilterSet(filters)}
+                            title={Object.entries(filters)
+                              .map(([key, value]) => `${activeCategoryFields.find(f => f.key === key)?.name}: ${value}`)
+                              .join(' | ')}
+                          >
+                            {Object.values(filters).join(' / ')}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="action-buttons">
                 <button
