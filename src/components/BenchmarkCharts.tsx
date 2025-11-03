@@ -17,7 +17,6 @@ interface ChartDataPoint {
 
 export function BenchmarkCharts({ project, onBack }: BenchmarkChartsProps) {
   const [categories, setCategories] = useState<{ [key: string]: string[] }>({})
-  const [selectedCategories, setSelectedCategories] = useState<CategoryFilters>({})
   const [benchmarks, setBenchmarks] = useState<Benchmark[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -33,6 +32,18 @@ export function BenchmarkCharts({ project, onBack }: BenchmarkChartsProps) {
       { key: 'category5', name: project.category5_name },
     ].filter(cat => cat.name !== null) as { key: string; name: string }[]
   , [project.category1_name, project.category2_name, project.category3_name, project.category4_name, project.category5_name])
+
+  const [selectedCategories, setSelectedCategories] = useState<CategoryFilters>(() => {
+    const initialCategories: CategoryFilters = {}
+    const params = new URLSearchParams(window.location.search)
+    activeCategoryFields.forEach(({ key }) => {
+      const value = params.get(key)
+      if (value) {
+        initialCategories[key as keyof CategoryFilters] = value
+      }
+    })
+    return initialCategories
+  })
 
   // Extract active value names from metadata - memoize to prevent recreating on every render
   const activeValueFields = useMemo(() =>
@@ -85,6 +96,18 @@ export function BenchmarkCharts({ project, onBack }: BenchmarkChartsProps) {
   useEffect(() => {
     fetchCategories()
   }, [fetchCategories])
+
+  // If categories are pre-selected from URL, fetch benchmarks automatically
+  useEffect(() => {
+    const hasPreselectedCategories = activeCategoryFields.some(({ key }) => {
+      return new URLSearchParams(window.location.search).has(key)
+    })
+
+    if (hasPreselectedCategories) {
+      fetchBenchmarks()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCategoryFields]) // Only run when activeCategoryFields are determined
 
   async function fetchBenchmarks() {
     try {
@@ -146,10 +169,36 @@ export function BenchmarkCharts({ project, onBack }: BenchmarkChartsProps) {
   }
 
   const handleCategoryChange = (categoryKey: string, value: string) => {
-    setSelectedCategories(prev => ({
-      ...prev,
-      [categoryKey]: value
-    }))
+    setSelectedCategories(prev => {
+      const newCats = { ...prev }
+      if (value) {
+        newCats[categoryKey as keyof CategoryFilters] = value
+      } else {
+        delete newCats[categoryKey as keyof CategoryFilters]
+      }
+
+      // Update URL
+      const params = new URLSearchParams(window.location.search)
+      Object.keys(newCats).forEach(key => {
+        const catValue = newCats[key as keyof CategoryFilters]
+        if (catValue) {
+          params.set(key, catValue)
+        } else {
+          params.delete(key)
+        }
+      })
+      // clean up old keys
+      Object.keys(prev).forEach(key => {
+        if (!newCats[key as keyof CategoryFilters]) {
+          params.delete(key)
+        }
+      })
+
+
+      window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}`)
+
+      return newCats
+    })
   }
 
   const handleShowCharts = () => {
@@ -160,6 +209,10 @@ export function BenchmarkCharts({ project, onBack }: BenchmarkChartsProps) {
     setSelectedCategories({})
     setShowCharts(false)
     setBenchmarks([])
+    // Reset URL
+    const params = new URLSearchParams(window.location.search)
+    activeCategoryFields.forEach(({ key }) => params.delete(key))
+    window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}`)
   }
 
   // Generate a unique key for a category combination
