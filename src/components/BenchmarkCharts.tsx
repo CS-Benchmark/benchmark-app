@@ -93,34 +93,54 @@ export function BenchmarkCharts({ project, onBack }: BenchmarkChartsProps) {
         return { key, values }
       })
 
-      // Fetch a few example combinations
-      const examplesPromise = supabase
-        .rpc('get_example_filters', {
-          p_project: project.project,
-          p_category_columns: activeCategoryFields.map(c => c.key)
-        })
+      // Also fetch a small sample of benchmarks to generate examples
+      const exampleDataPromise = supabase
+        .from('benchmarks')
+        .select(activeCategoryFields.map(c => c.key).join(','))
+        .eq('project', project.project)
+        .limit(100) // Fetch 100 records to find 3 unique examples
 
-      const [categoryResults, { data: examplesData, error: examplesError }] = await Promise.all([
+      const [categoryResults, { data: exampleData, error: exampleError }] = await Promise.all([
         Promise.all(categoryPromises),
-        examplesPromise
+        exampleDataPromise
       ])
-
-      if (examplesError) {
-        console.warn('Could not fetch example filters:', examplesError.message)
-      } else {
-        setExampleFilters(examplesData || [])
-      }
 
       // Convert results to categoryMap
       const categoriesData: { [key: string]: string[] } = {}
       categoryResults.forEach(({ key, values }) => {
         categoriesData[key] = values
       })
-
       setCategories(categoriesData)
+
+      // Generate examples from the sample data
+      if (exampleError) {
+        console.warn('Could not fetch example data:', exampleError.message)
+      } else if (exampleData) {
+        const examples: CategoryFilters[] = []
+        const exampleComboKeys = new Set<string>()
+
+        exampleData.forEach(benchmark => {
+          const combo: CategoryFilters = {}
+          let comboKey = ''
+          activeCategoryFields.forEach(({ key }) => {
+            const value = (benchmark as any)[key] as string
+            if (value) {
+              combo[key as keyof CategoryFilters] = value
+              comboKey += `${key}:${value}|`
+            }
+          })
+
+          if (Object.keys(combo).length > 0 && examples.length < 3 && !exampleComboKeys.has(comboKey)) {
+            examples.push(combo)
+            exampleComboKeys.add(comboKey)
+          }
+        })
+        setExampleFilters(examples)
+      }
+
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
-      console.error('Error fetching categories:', err)
+      console.error('Error fetching categories or examples:', err)
     } finally {
       setLoading(false)
     }
@@ -185,11 +205,12 @@ export function BenchmarkCharts({ project, onBack }: BenchmarkChartsProps) {
       // Check number of unique combinations
       const benchmarkData = data || []
       const uniqueCombos = new Set<string>()
+
       benchmarkData.forEach(benchmark => {
-        const key = activeCategoryFields
+        const fullKey = activeCategoryFields
           .map(({ key }) => benchmark[key as keyof typeof benchmark] || 'null')
           .join('|')
-        uniqueCombos.add(key)
+        uniqueCombos.add(fullKey)
       })
 
       if (uniqueCombos.size > 25) {
