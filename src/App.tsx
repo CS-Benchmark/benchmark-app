@@ -1,33 +1,51 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { ProjectSelector } from './components/ProjectSelector'
+import type { BenchmarkProjectMetadata } from './types/benchmark'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [selectedProject, setSelectedProject] = useState<BenchmarkProjectMetadata | null>(null)
+
+  const handleProjectSelect = (project: BenchmarkProjectMetadata) => {
+    setSelectedProject(project)
+    console.log('Selected project:', project)
+  }
+
+  const handleBackToProjects = () => {
+    setSelectedProject(null)
+  }
 
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      {!selectedProject ? (
+        <ProjectSelector onProjectSelect={handleProjectSelect} />
+      ) : (
+        <div className="benchmark-view">
+          <button onClick={handleBackToProjects} className="back-button">
+            ← Back to Projects
+          </button>
+          <h1>Benchmark Information</h1>
+          <h2>{selectedProject.project}</h2>
+          <div className="project-info">
+            <h3>Categories:</h3>
+            <ul>
+              {selectedProject.category1_name && <li>{selectedProject.category1_name}</li>}
+              {selectedProject.category2_name && <li>{selectedProject.category2_name}</li>}
+              {selectedProject.category3_name && <li>{selectedProject.category3_name}</li>}
+              {selectedProject.category4_name && <li>{selectedProject.category4_name}</li>}
+              {selectedProject.category5_name && <li>{selectedProject.category5_name}</li>}
+            </ul>
+            <h3>Values:</h3>
+            <ul>
+              {selectedProject.value1_name && <li>{selectedProject.value1_name}</li>}
+              {selectedProject.value2_name && <li>{selectedProject.value2_name}</li>}
+              {selectedProject.value3_name && <li>{selectedProject.value3_name}</li>}
+              {selectedProject.value4_name && <li>{selectedProject.value4_name}</li>}
+              {selectedProject.value5_name && <li>{selectedProject.value5_name}</li>}
+            </ul>
+          </div>
+        </div>
+      )}
     </>
   )
 }

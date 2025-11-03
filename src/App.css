@@ -1,7 +1,7 @@
 #root {
-  max-width: 1280px;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 0;
   text-align: center;
 }
 
@@ -39,4 +39,68 @@
 
 .read-the-docs {
   color: #888;
+}
+
+.benchmark-view {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: left;
+}
+
+.back-button {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  background-color: #646cff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-bottom: 2rem;
+}
+
+.back-button:hover {
+  background-color: #535bf2;
+}
+
+.benchmark-view h1 {
+  text-align: center;
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.benchmark-view h2 {
+  text-align: center;
+  font-size: 2rem;
+  color: #646cff;
+  margin-bottom: 2rem;
+}
+
+.project-info {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.project-info h3 {
+  color: #333;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.project-info h3:first-child {
+  margin-top: 0;
+}
+
+.project-info ul {
+  list-style-type: disc;
+  padding-left: 2rem;
+}
+
+.project-info li {
+  margin-bottom: 0.5rem;
+  color: #555;
 }
