@@ -12,7 +12,7 @@
   transition: filter 300ms;
 }
 .logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+  filter: drop-shadow(0 0 2em #22c55eaa);
 }
 .logo.react:hover {
   filter: drop-shadow(0 0 2em #61dafbaa);
@@ -51,7 +51,7 @@
 .back-button {
   padding: 0.75rem 1.5rem;
   font-size: 1rem;
-  background-color: #646cff;
+  background-color: #22c55e;
   color: white;
   border: none;
   border-radius: 8px;
@@ -61,7 +61,7 @@
 }
 
 .back-button:hover {
-  background-color: #535bf2;
+  background-color: #16a34a;
 }
 
 .benchmark-view h1 {
@@ -73,7 +73,7 @@
 .benchmark-view h2 {
   text-align: center;
   font-size: 2rem;
-  color: #646cff;
+  color: #22c55e;
   margin-bottom: 2rem;
 }
 

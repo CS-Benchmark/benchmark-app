@@ -38,7 +38,7 @@
   margin-top: 1rem;
   padding: 0.5rem 1.5rem;
   font-size: 1rem;
-  background-color: #646cff;
+  background-color: #22c55e;
   color: white;
   border: none;
   border-radius: 8px;
@@ -47,7 +47,7 @@
 }
 
 .error button:hover {
-  background-color: #535bf2;
+  background-color: #16a34a;
 }
 
 .project-grid {
@@ -70,7 +70,7 @@
 .project-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-  border-color: #646cff;
+  border-color: #22c55e;
 }
 
 .project-card h3 {
@@ -103,4 +103,3 @@
     font-size: 2rem;
   }
 }
-

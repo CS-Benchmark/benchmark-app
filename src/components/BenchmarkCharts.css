@@ -78,8 +78,8 @@
 
 .filter-group select:focus {
   outline: none;
-  border-color: #8884d8;
-  box-shadow: 0 0 0 2px rgba(136, 132, 216, 0.2);
+  border-color: #22c55e;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
 }
 
 .action-buttons {
@@ -89,7 +89,7 @@
 }
 
 .primary-button {
-  background: #8884d8;
+  background: #22c55e;
   color: white;
   border: none;
   padding: 12px 24px;
@@ -101,12 +101,29 @@
 }
 
 .primary-button:hover:not(:disabled) {
-  background: #7770c8;
+  background: #16a34a;
 }
 
 .primary-button:disabled {
   background: #ccc;
   cursor: not-allowed;
+}
+
+/* New secondary button style to align with theme */
+.secondary-button {
+  background: #f5f5f5;
+  color: #1f2937;
+  border: 1px solid #d1d5db;
+  padding: 10px 18px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.secondary-button:hover {
+  background: #e5e7eb;
+  border-color: #16a34a;
 }
 
 .reset-button {

@@ -1,7 +1,7 @@
 ﻿import {useEffect, useState, useCallback, useMemo} from 'react'
 import {supabase} from '../supabaseClient'
 import type {BenchmarkProjectMetadata, Benchmark, CategoryFilters} from '../types/benchmark'
-import {LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer} from 'recharts'
+import {LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer} from 'recharts'
 import './BenchmarkCharts.css'
 
 interface BenchmarkChartsProps {
@@ -123,7 +123,7 @@ export function BenchmarkCharts({project, onBack}: BenchmarkChartsProps) {
                 exampleData.forEach(benchmark => {
                     const combo: CategoryFilters = {}
                     let comboKey = ''
-                    const row = benchmark as Record<string, string | null>
+                    const row = (benchmark as unknown) as Record<string, string | null>
                     activeCategoryFields.forEach(({key}) => {
                         const value = row[key] || undefined
                         if (value) {
