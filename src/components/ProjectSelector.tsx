@@ -16,6 +16,18 @@ export function ProjectSelector({ onProjectSelect }: ProjectSelectorProps) {
     fetchProjects()
   }, [])
 
+  // Auto-select project from URL parameter
+  useEffect(() => {
+    const initialProject = sessionStorage.getItem('initialProject')
+    if (initialProject && projects.length > 0) {
+      const project = projects.find((p) => p.project === initialProject)
+      if (project) {
+        sessionStorage.removeItem('initialProject')
+        onProjectSelect(project)
+      }
+    }
+  }, [projects, onProjectSelect])
+
   async function fetchProjects() {
     try {
       setLoading(true)
