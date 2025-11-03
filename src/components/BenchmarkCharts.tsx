@@ -123,8 +123,9 @@ export function BenchmarkCharts({project, onBack}: BenchmarkChartsProps) {
                 exampleData.forEach(benchmark => {
                     const combo: CategoryFilters = {}
                     let comboKey = ''
+                    const row = benchmark as Record<string, string | null>
                     activeCategoryFields.forEach(({key}) => {
-                        const value = (benchmark as any)[key] as string
+                        const value = row[key] || undefined
                         if (value) {
                             combo[key as keyof CategoryFilters] = value
                             comboKey += `${key}:${value}|`
@@ -164,14 +165,17 @@ export function BenchmarkCharts({project, onBack}: BenchmarkChartsProps) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeCategoryFields]) // Only run when activeCategoryFields are determined
 
-    async function fetchBenchmarks() {
+    // Accept optional override filters to support immediate fetching from suggested filters
+    async function fetchBenchmarks(filtersOverride?: CategoryFilters) {
         try {
             setLoading(true)
             setError(null)
 
+            const effectiveFilters = filtersOverride ?? selectedCategories
+
             // Save filters to recent list
-            if (Object.keys(selectedCategories).length > 0) {
-                addRecentFilter(project.project, selectedCategories)
+            if (Object.keys(effectiveFilters).length > 0) {
+                addRecentFilter(project.project, effectiveFilters)
                 setRecentFilters(getRecentFilters(project.project))
             }
 
@@ -182,7 +186,7 @@ export function BenchmarkCharts({project, onBack}: BenchmarkChartsProps) {
 
             // Apply category filters
             activeCategoryFields.forEach(({key}) => {
-                const selectedValue = selectedCategories[key as keyof CategoryFilters]
+                const selectedValue = effectiveFilters[key as keyof CategoryFilters]
                 if (selectedValue) {
                     query = query.eq(key, selectedValue)
                 }
@@ -264,7 +268,8 @@ export function BenchmarkCharts({project, onBack}: BenchmarkChartsProps) {
     }
 
     const handleShowCharts = () => {
-        fetchBenchmarks()
+        // Ensure we fetch using the latest selected categories
+        fetchBenchmarks(selectedCategories)
     }
 
     const applyFilterSet = (filters: CategoryFilters) => {
@@ -277,6 +282,9 @@ export function BenchmarkCharts({project, onBack}: BenchmarkChartsProps) {
             }
         })
         window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}`)
+
+        // Immediately fetch benchmarks for the chosen filters and show charts
+        fetchBenchmarks(filters)
     }
 
     const handleResetFilters = () => {
@@ -449,6 +457,17 @@ export function BenchmarkCharts({project, onBack}: BenchmarkChartsProps) {
                                 ))}
                             </div>
 
+                            {/* Moved Show Charts button up under category selection */}
+                            <div className="action-buttons">
+                                <button
+                                    onClick={handleShowCharts}
+                                    className="primary-button"
+                                    disabled={loading}
+                                >
+                                    Show Charts
+                                </button>
+                            </div>
+
                             {/* Recently Used and Example Filters */}
                             {(recentFilters.length > 0 || exampleFilters.length > 0) && (
                                 <div className="suggested-filters">
@@ -492,16 +511,6 @@ export function BenchmarkCharts({project, onBack}: BenchmarkChartsProps) {
                                     )}
                                 </div>
                             )}
-
-                            <div className="action-buttons">
-                                <button
-                                    onClick={handleShowCharts}
-                                    className="primary-button"
-                                    disabled={loading}
-                                >
-                                    Show Charts
-                                </button>
-                            </div>
                         </>
                     )}
 
@@ -617,24 +626,17 @@ export function BenchmarkCharts({project, onBack}: BenchmarkChartsProps) {
                                         {/* Line Chart */}
                                         <div className="chart-wrapper">
                                             <ResponsiveContainer width="100%" height={500}>
-                                                <LineChart data={chartData} margin={{top: 5, right: 30, left: 20, bottom: 100}}>
+                                                <LineChart data={chartData} margin={{top: 5, right: 30, left: 20, bottom: 20}}>
                                                     <CartesianGrid strokeDasharray="3 3"/>
                                                     <XAxis
                                                         dataKey="timestamp"
                                                         angle={-45}
                                                         textAnchor="end"
-                                                        height={100}
+                                                        height={50}
                                                         tick={{fontSize: 11}}
                                                     />
                                                     <YAxis/>
                                                     <Tooltip/>
-                                                    <Legend
-                                                        wrapperStyle={{paddingTop: '20px'}}
-                                                        formatter={(value) => {
-                                                            const combo = uniqueCategoryCombinations.find(c => c.key === value)
-                                                            return combo ? combo.labelCompact : value
-                                                        }}
-                                                    />
                                                     {uniqueCategoryCombinations.map((combo, index) => (
                                                         <Line
                                                             key={combo.key}
