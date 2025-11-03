@@ -35,7 +35,7 @@ jobs:
       
       - name: Build
         env:
-          VITE_BASE_PATH: https://github.com/CS-Benchmark/benchmark-app/
+          VITE_BASE_PATH: https://cs-benchmark.github.io/benchmark-app/
         run: npm run build
       
       - name: Setup Pages
