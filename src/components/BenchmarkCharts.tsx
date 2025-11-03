@@ -48,36 +48,29 @@ export function BenchmarkCharts({ project, onBack }: BenchmarkChartsProps) {
   const fetchCategories = useCallback(async () => {
     try {
       setLoading(true)
-      const { data, error: fetchError } = await supabase
-        .from('benchmarks')
-        .select('category1, category2, category3, category4, category5')
-        .eq('project', project.project)
 
-      if (fetchError) {
-        setError(fetchError.message)
-        return
-      }
+      // Fetch distinct values for each active category in parallel using the database function
+      const categoryPromises = activeCategoryFields.map(async ({ key }) => {
+        const { data, error: fetchError } = await supabase
+          .rpc('get_distinct_categories', {
+            p_project: project.project,
+            p_category_column: key
+          })
 
-      // Extract unique values for each category
-      const categoryMap: { [key: string]: Set<string> } = {}
+        if (fetchError) throw fetchError
 
-      activeCategoryFields.forEach(({ key }) => {
-        categoryMap[key] = new Set()
+        // Extract values from the returned rows
+        const values = (data || []).map((row: { value: string }) => row.value).sort()
+
+        return { key, values }
       })
 
-      data?.forEach((row) => {
-        activeCategoryFields.forEach(({ key }) => {
-          const value = row[key as keyof typeof row]
-          if (value) {
-            categoryMap[key].add(value as string)
-          }
-        })
-      })
+      const results = await Promise.all(categoryPromises)
 
-      // Convert sets to sorted arrays
+      // Convert results to categoryMap
       const categoriesData: { [key: string]: string[] } = {}
-      Object.keys(categoryMap).forEach(key => {
-        categoriesData[key] = Array.from(categoryMap[key]).sort()
+      results.forEach(({ key, values }) => {
+        categoriesData[key] = values
       })
 
       setCategories(categoriesData)
@@ -100,7 +93,7 @@ export function BenchmarkCharts({ project, onBack }: BenchmarkChartsProps) {
 
       let query = supabase
         .from('benchmarks')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('project', project.project)
 
       // Apply category filters
@@ -111,11 +104,19 @@ export function BenchmarkCharts({ project, onBack }: BenchmarkChartsProps) {
         }
       })
 
-      const { data, error: fetchError } = await query.order('timestamp', { ascending: true })
+      // Limit to 10,000 records for performance - add pagination if needed
+      query = query.order('timestamp', { ascending: true }).limit(10000)
+
+      const { data, error: fetchError, count } = await query
 
       if (fetchError) {
         setError(fetchError.message)
         return
+      }
+
+      // Warn if hitting the limit
+      if (count && count > 10000) {
+        setError(`Warning: Results limited to 10,000 of ${count.toLocaleString()} total records. Please apply more specific filters to see all data.`)
       }
 
       // Check number of unique combinations
