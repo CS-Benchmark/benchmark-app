@@ -200,7 +200,13 @@ export function BenchmarkCharts({ project, onBack }: BenchmarkChartsProps) {
     const timeStampMap = new Map<string, ChartDataPoint>()
 
     benchmarks.forEach(benchmark => {
-      const timestamp = new Date(benchmark.timestamp).toLocaleString()
+        const timestamp = new Date(benchmark.timestamp).toLocaleString(undefined, {
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: 'numeric'
+        });
       const categoryKey = getCategoryKey(benchmark)
       const value = benchmark[valueKey as keyof Benchmark] as number | null
 
